@@ -1,16 +1,41 @@
-# React + Vite
+# SODFA v2
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+SODFA est une boutique React + Vite avec une interface admin (produits, catégories, commandes).
 
-Currently, two official plugins are available:
+## Démarrage local
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+1. Installer les dépendances:
+	- `npm install`
+2. Lancer le projet:
+	- `npm run dev`
 
-## React Compiler
+## Configuration Supabase
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Le projet peut fonctionner en fallback local (`localStorage`) si Supabase n'est pas configuré.
 
-## Expanding the ESLint configuration
+### 1) Créer un projet Supabase
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+- Créer un nouveau projet dans Supabase.
+- Ouvrir **SQL Editor** et exécuter le script [supabase/schema.sql](supabase/schema.sql).
+
+### 2) Variables d'environnement
+
+- Copier [.env.example](.env.example) vers `.env`.
+- Renseigner:
+  - `VITE_SUPABASE_URL`
+  - `VITE_SUPABASE_ANON_KEY`
+
+### 3) Déploiement Vercel
+
+Ajouter les mêmes variables dans les settings Vercel:
+
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
+
+Puis redéployer.
+
+## Notes importantes
+
+- `products`, `categories` et `orders` sont synchronisés avec Supabase si les variables sont présentes.
+- Le panier (`cart`) reste local au navigateur.
+- L'auth admin actuelle est encore locale (mot de passe statique côté client).

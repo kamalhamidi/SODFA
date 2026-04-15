@@ -1,6 +1,7 @@
 // src/context/CartContext.jsx — Contexte pour le panier et les commandes
 import { createContext, useContext, useReducer, useEffect, useCallback } from 'react'
 import { useLocalStorage } from '../hooks/useLocalStorage'
+import { supabase, isSupabaseConfigured } from '../lib/supabaseClient'
 
 // Frais de livraison
 const SHIPPING_THRESHOLD = 500 // Gratuit dès 500 MAD
@@ -8,6 +9,9 @@ const SHIPPING_COST = 40 // 40 MAD
 
 const cartReducer = (state, action) => {
   switch (action.type) {
+    case 'HYDRATE_ORDERS':
+      return { ...state, orders: action.payload }
+
     case 'ADD_TO_CART': {
       const existingIndex = state.items.findIndex(
         item => item.productId === action.payload.productId && item.sizeML === action.payload.sizeML
@@ -76,10 +80,73 @@ export function CartProvider({ children }) {
   const [savedCart, setSavedCart] = useLocalStorage('sodfa_cart', [])
   const [savedOrders, setSavedOrders] = useLocalStorage('sodfa_orders', [])
 
-  const [state, dispatch] = useReducer(cartReducer, {
+  const [state, baseDispatch] = useReducer(cartReducer, {
     items: savedCart,
     orders: savedOrders,
   })
+
+  useEffect(() => {
+    if (!isSupabaseConfigured || !supabase) return
+
+    const loadRemoteOrders = async () => {
+      const { data, error } = await supabase
+        .from('orders')
+        .select('*')
+        .order('createdAt', { ascending: false })
+
+      if (error) {
+        console.error('Erreur chargement Supabase (orders):', error)
+        return
+      }
+
+      const remoteOrders = data ?? []
+
+      if (remoteOrders.length > 0) {
+        baseDispatch({ type: 'HYDRATE_ORDERS', payload: remoteOrders })
+      } else if (savedOrders.length > 0) {
+        await supabase.from('orders').upsert(savedOrders, { onConflict: 'id' })
+      }
+    }
+
+    loadRemoteOrders()
+  }, [savedOrders])
+
+  const dispatch = useCallback((action) => {
+    baseDispatch(action)
+
+    if (!isSupabaseConfigured || !supabase) return
+
+    const sync = async () => {
+      switch (action.type) {
+        case 'ADD_ORDER':
+          await supabase.from('orders').insert(action.payload)
+          break
+
+        case 'UPDATE_ORDER_STATUS': {
+          const targetOrder = state.orders.find(o => o.id === action.payload.orderId)
+          if (!targetOrder) return
+
+          const updatedTimeline = [
+            ...targetOrder.timeline,
+            { status: action.payload.status, date: new Date().toISOString() },
+          ]
+
+          await supabase
+            .from('orders')
+            .update({ status: action.payload.status, timeline: updatedTimeline })
+            .eq('id', action.payload.orderId)
+          break
+        }
+
+        default:
+          break
+      }
+    }
+
+    sync().catch((error) => {
+      console.error('Erreur sync Supabase (orders):', error)
+    })
+  }, [state.orders])
 
   // Synchroniser avec localStorage
   useEffect(() => {

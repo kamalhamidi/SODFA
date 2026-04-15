@@ -1,6 +1,7 @@
 // src/context/StoreContext.jsx — Contexte global pour les produits et catégories
-import { createContext, useContext, useReducer, useEffect } from 'react'
+import { createContext, useContext, useReducer, useEffect, useCallback, useState } from 'react'
 import { useLocalStorage } from '../hooks/useLocalStorage'
+import { supabase, isSupabaseConfigured } from '../lib/supabaseClient'
 
 // === DONNÉES INITIALES ===
 const INITIAL_CATEGORIES = [
@@ -145,6 +146,13 @@ const INITIAL_PRODUCTS = [
 // === REDUCER ===
 const storeReducer = (state, action) => {
   switch (action.type) {
+    case 'HYDRATE_STORE':
+      return {
+        ...state,
+        products: action.payload.products,
+        categories: action.payload.categories,
+      }
+
     // --- Produits ---
     case 'ADD_PRODUCT':
       return { ...state, products: [...state.products, action.payload] }
@@ -192,11 +200,100 @@ const StoreContext = createContext(null)
 export function StoreProvider({ children }) {
   const [savedProducts, setSavedProducts] = useLocalStorage('sodfa_products', INITIAL_PRODUCTS)
   const [savedCategories, setSavedCategories] = useLocalStorage('sodfa_categories', INITIAL_CATEGORIES)
+  const [isHydrated, setIsHydrated] = useState(!isSupabaseConfigured)
+  const [isLoading, setIsLoading] = useState(isSupabaseConfigured)
 
-  const [state, dispatch] = useReducer(storeReducer, {
+  const [state, baseDispatch] = useReducer(storeReducer, {
     products: savedProducts,
     categories: savedCategories,
   })
+
+  useEffect(() => {
+    if (!isSupabaseConfigured || !supabase) return
+
+    const loadRemoteStore = async () => {
+      setIsLoading(true)
+
+      const [productsResponse, categoriesResponse] = await Promise.all([
+        supabase.from('products').select('*'),
+        supabase.from('categories').select('*').order('order', { ascending: true }),
+      ])
+
+      if (productsResponse.error || categoriesResponse.error) {
+        console.error('Erreur chargement Supabase (store):', productsResponse.error || categoriesResponse.error)
+        setIsHydrated(true)
+        setIsLoading(false)
+        return
+      }
+
+      const remoteProducts = productsResponse.data ?? []
+      const remoteCategories = categoriesResponse.data ?? []
+
+      const hasRemoteData = remoteProducts.length > 0 || remoteCategories.length > 0
+
+      if (hasRemoteData) {
+        baseDispatch({
+          type: 'HYDRATE_STORE',
+          payload: {
+            products: remoteProducts,
+            categories: remoteCategories,
+          },
+        })
+      } else {
+        // Premier démarrage : pousser les données locales initiales vers Supabase
+        await Promise.all([
+          supabase.from('products').upsert(savedProducts, { onConflict: 'id' }),
+          supabase.from('categories').upsert(savedCategories, { onConflict: 'id' }),
+        ])
+      }
+
+      setIsHydrated(true)
+      setIsLoading(false)
+    }
+
+    loadRemoteStore()
+  }, [savedProducts, savedCategories])
+
+  const dispatch = useCallback((action) => {
+    baseDispatch(action)
+
+    if (!isSupabaseConfigured || !supabase || !isHydrated) return
+
+    const sync = async () => {
+      switch (action.type) {
+        case 'ADD_PRODUCT':
+          await supabase.from('products').insert(action.payload)
+          break
+        case 'UPDATE_PRODUCT':
+          await supabase.from('products').update(action.payload).eq('id', action.payload.id)
+          break
+        case 'DELETE_PRODUCT':
+          await supabase.from('products').delete().eq('id', action.payload)
+          break
+        case 'SET_PRODUCTS':
+          await supabase.from('products').upsert(action.payload, { onConflict: 'id' })
+          break
+        case 'ADD_CATEGORY':
+          await supabase.from('categories').insert(action.payload)
+          break
+        case 'UPDATE_CATEGORY':
+          await supabase.from('categories').update(action.payload).eq('id', action.payload.id)
+          break
+        case 'DELETE_CATEGORY':
+          await supabase.from('categories').delete().eq('id', action.payload)
+          break
+        case 'REORDER_CATEGORIES':
+          await supabase.from('categories').upsert(action.payload, { onConflict: 'id' })
+          break
+        default:
+          break
+      }
+    }
+
+    sync().catch((error) => {
+      console.error('Erreur sync Supabase (store):', error)
+    })
+  }, [isHydrated])
 
   // Synchroniser avec localStorage à chaque changement
   useEffect(() => {
@@ -234,6 +331,7 @@ export function StoreProvider({ children }) {
       categories: state.categories,
       activeProducts,
       lowStockProducts,
+      isLoading,
       dispatch,
       getProductsByCategory,
       getCategoryById,
