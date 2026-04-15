@@ -1,0 +1,183 @@
+/* src/index.css — Styles globaux SODFA */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* === BASE === */
+@layer base {
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    overflow-x: hidden;
+  }
+
+  /* Scrollbar personnalisée */
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #0a0a0a;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #c9a96e;
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #e8d5b0;
+  }
+
+  /* Sélection de texte dorée */
+  ::selection {
+    background: rgba(201, 169, 110, 0.3);
+    color: #f8f5f0;
+  }
+}
+
+/* === COMPONENTS === */
+@layer components {
+  /* Bouton doré avec effet shimmer */
+  .btn-gold {
+    @apply relative overflow-hidden bg-sodfa-gold text-sodfa-black font-jost font-medium
+           px-8 py-3 tracking-wider uppercase text-sm
+           transition-all duration-300 ease-out;
+  }
+  .btn-gold::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.3),
+      transparent
+    );
+    transition: left 0.5s ease;
+  }
+  .btn-gold:hover::before {
+    left: 100%;
+  }
+  .btn-gold:active {
+    transform: scale(0.97);
+  }
+
+  /* Bouton outline doré */
+  .btn-gold-outline {
+    @apply relative border border-sodfa-gold text-sodfa-gold font-jost font-medium
+           px-8 py-3 tracking-wider uppercase text-sm bg-transparent
+           transition-all duration-300 ease-out
+           hover:bg-sodfa-gold hover:text-sodfa-black;
+  }
+  .btn-gold-outline:active {
+    transform: scale(0.97);
+  }
+
+  /* Titre de section */
+  .section-title {
+    @apply font-cormorant text-4xl md:text-5xl lg:text-6xl font-light text-sodfa-cream
+           tracking-wide;
+  }
+
+  /* Séparateur doré */
+  .gold-divider {
+    @apply w-16 h-px bg-sodfa-gold mx-auto my-6;
+  }
+
+  /* Card de produit */
+  .product-card {
+    @apply relative bg-sodfa-charcoal overflow-hidden cursor-pointer
+           transition-transform duration-500 ease-out;
+  }
+  .product-card:hover {
+    transform: scale(1.02);
+  }
+
+  /* Overlay doré au hover */
+  .card-overlay {
+    @apply absolute inset-0 bg-gradient-to-t from-sodfa-black/90 via-sodfa-black/40 to-transparent
+           opacity-0 transition-opacity duration-500
+           flex items-end justify-center pb-8;
+  }
+  .group:hover .card-overlay {
+    opacity: 1;
+  }
+
+  /* Input style SODFA */
+  .input-sodfa {
+    @apply w-full bg-sodfa-charcoal border border-sodfa-gold/20 text-sodfa-cream
+           px-4 py-3 font-jost text-sm rounded-none
+           focus:border-sodfa-gold focus:outline-none focus:ring-1 focus:ring-sodfa-gold/30
+           transition-all duration-300 placeholder:text-sodfa-cream/30;
+  }
+
+  /* Badge statut */
+  .badge {
+    @apply inline-flex items-center px-3 py-1 text-xs font-medium tracking-wider uppercase;
+  }
+  .badge-gold {
+    @apply inline-flex items-center px-3 py-1 text-xs font-medium tracking-wider uppercase bg-sodfa-gold/10 text-sodfa-gold border border-sodfa-gold/20;
+  }
+  .badge-green {
+    @apply inline-flex items-center px-3 py-1 text-xs font-medium tracking-wider uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20;
+  }
+  .badge-red {
+    @apply inline-flex items-center px-3 py-1 text-xs font-medium tracking-wider uppercase bg-red-500/10 text-red-400 border border-red-500/20;
+  }
+  .badge-blue {
+    @apply inline-flex items-center px-3 py-1 text-xs font-medium tracking-wider uppercase bg-blue-500/10 text-blue-400 border border-blue-500/20;
+  }
+  .badge-orange {
+    @apply inline-flex items-center px-3 py-1 text-xs font-medium tracking-wider uppercase bg-orange-500/10 text-orange-400 border border-orange-500/20;
+  }
+  .badge-yellow {
+    @apply inline-flex items-center px-3 py-1 text-xs font-medium tracking-wider uppercase bg-yellow-500/10 text-yellow-400 border border-yellow-500/20;
+  }
+
+  /* Glassmorphism card */
+  .glass-card {
+    @apply bg-white/5 backdrop-blur-md border border-white/10 rounded-sm;
+  }
+}
+
+/* === UTILITIES === */
+@layer utilities {
+  /* Gradient texte doré */
+  .text-gradient-gold {
+    background: linear-gradient(135deg, #c9a96e 0%, #e8d5b0 50%, #c9a96e 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Fond dégradé noir/charcoal */
+  .bg-gradient-dark {
+    background: linear-gradient(180deg, #0a0a0a 0%, #1a1a1a 100%);
+  }
+
+  /* Animation fade-in au scroll */
+  .reveal {
+    opacity: 0;
+    transform: translateY(30px);
+    transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .reveal.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* Scroll progress bar */
+  .scroll-progress {
+    @apply fixed top-0 left-0 h-[2px] bg-sodfa-gold z-[9999];
+    transition: width 0.1s linear;
+  }
+}
